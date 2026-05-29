@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>Controle de Botões Pro</title>
+  <title>Botões Pro</title>
 
-  <meta name="theme-color" content="#35f5a3" />
-  <meta name="description" content="Aplicativo de controle de produção de botões, saldo e entregas." />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="description" content="Controle local de produção de botões, saldo, entregas, histórico, relatórios e backup." />
 
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -22,239 +22,348 @@
 </head>
 
 <body>
-  <div class="background-grid"></div>
-  <div class="orb orb-green"></div>
-  <div class="orb orb-blue"></div>
-  <div class="orb orb-gold"></div>
+  <div class="bg-grid"></div>
+  <div class="glow glow-a"></div>
+  <div class="glow glow-b"></div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-head">
+      <div class="brand">
+        <span class="brand-icon">CB</span>
+        <div>
+          <strong>Botões Pro</strong>
+          <small>Controle local</small>
+        </div>
+      </div>
+
+      <button id="closeMenu" class="icon-btn" type="button">×</button>
+    </div>
+
+    <nav class="nav">
+      <button class="nav-link active" data-screen="home" type="button">Início</button>
+      <button class="nav-link" data-screen="newLot" type="button">Novo lote</button>
+      <button class="nav-link" data-screen="history" type="button">Histórico</button>
+      <button class="nav-link" data-screen="closing" type="button">Fechamento</button>
+      <button class="nav-link" data-screen="reports" type="button">Relatórios</button>
+      <button class="nav-link" data-screen="backup" type="button">Backup</button>
+      <button class="nav-link" data-screen="settings" type="button">Configurações</button>
+    </nav>
+
+    <div class="save-status">
+      <span>Último salvamento</span>
+      <strong id="lastSaveText">Ainda não salvo</strong>
+    </div>
+  </aside>
+
+  <div id="overlay" class="overlay"></div>
 
   <div class="app">
-    <header class="hero">
-      <div class="hero-content">
-        <div class="brand-line">
-          <span class="brand-mark">CB</span>
-          <span class="brand-text">Controle de Botões Pro</span>
-        </div>
+    <header class="topbar">
+      <button id="openMenu" class="icon-btn" type="button">☰</button>
 
-        <h1>Produção, saldo e entregas em um painel só.</h1>
-
-        <p>
-          Registre lotes completos, acompanhe suas cores, some automaticamente
-          R$ 0,05 por botão e R$ 5,00 por entrega. Tudo salvo no próprio aparelho.
-        </p>
-
-        <div class="hero-actions">
-          <button id="installApp" class="btn btn-ghost" type="button">
-            Instalar app
-          </button>
-
-          <button id="downloadReportTop" class="btn btn-primary" type="button">
-            Baixar relatório
-          </button>
-        </div>
+      <div>
+        <strong id="screenTitle">Início</strong>
+        <small id="connectionStatus">Online</small>
       </div>
 
-      <div class="hero-card">
-        <span>Saldo atual</span>
-        <strong id="heroBalance">R$ 0,00</strong>
-        <small>Salvo neste aparelho</small>
-      </div>
+      <button id="installApp" class="install-btn" type="button">Instalar</button>
     </header>
 
     <main>
-      <section class="dashboard">
-        <article class="metric metric-main">
-          <span>Saldo geral</span>
-          <strong id="generalBalance">R$ 0,00</strong>
-          <small>Botões + entregas</small>
-        </article>
+      <section id="screen-home" class="screen active">
+        <section class="hero">
+          <div>
+            <div class="brand mini">
+              <span class="brand-icon">CB</span>
+              <div>
+                <strong>Botões Pro</strong>
+                <small>Produção e saldo</small>
+              </div>
+            </div>
 
-        <article class="metric">
-          <span>Saldo hoje</span>
-          <strong id="todayBalance">R$ 0,00</strong>
-          <small>Somente a data atual</small>
-        </article>
+            <h1>Controle limpo. Ganho claro.</h1>
+            <p>Registre lotes, confirme entregas depois e acompanhe o saldo sem bagunça.</p>
+          </div>
 
-        <article class="metric">
-          <span>Botões hoje</span>
-          <strong id="todayButtons">0</strong>
-          <small>Produção do dia</small>
-        </article>
+          <div class="balance-card">
+            <span>Saldo geral</span>
+            <strong id="heroBalance">R$ 0,00</strong>
+            <small>Botões + entregas confirmadas</small>
+          </div>
+        </section>
 
-        <article class="metric">
-          <span>Total de botões</span>
-          <strong id="generalButtons">0</strong>
-          <small>Todos os lotes</small>
-        </article>
+        <section class="metrics">
+          <article class="metric main">
+            <span>Hoje</span>
+            <strong id="todayBalance">R$ 0,00</strong>
+            <small>Saldo do dia</small>
+          </article>
 
-        <article class="metric">
-          <span>Entregas feitas</span>
-          <strong id="deliveryCount">0</strong>
-          <small>R$ 5,00 cada</small>
-        </article>
+          <article class="metric">
+            <span>Botões hoje</span>
+            <strong id="todayButtons">0</strong>
+            <small>Produzidos</small>
+          </article>
+
+          <article class="metric">
+            <span>Total botões</span>
+            <strong id="totalButtons">0</strong>
+            <small>Histórico geral</small>
+          </article>
+
+          <article class="metric">
+            <span>Entregas</span>
+            <strong id="totalDeliveries">0</strong>
+            <small>Confirmadas</small>
+          </article>
+        </section>
+
+        <section class="panel split">
+          <div>
+            <span class="eyebrow">Atalho</span>
+            <h2>Registrar produção</h2>
+            <p>Cadastre o lote agora. A entrega será confirmada depois no histórico.</p>
+          </div>
+
+          <button class="btn primary" data-go="newLot" type="button">Novo lote</button>
+        </section>
+
+        <section class="grid-2">
+          <article class="panel">
+            <span class="eyebrow">Meta diária</span>
+            <h2 id="goalPercent">Sem meta</h2>
+            <p id="goalText">Configure uma meta nas configurações.</p>
+
+            <div class="progress">
+              <div id="goalBar" class="progress-fill"></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <span class="eyebrow">Último registro</span>
+            <h2>Último lote</h2>
+            <div id="lastLotBox"></div>
+          </article>
+        </section>
       </section>
 
-      <section id="formPanel" class="panel panel-form">
-        <div class="section-head">
-          <div>
-            <span class="eyebrow">Novo registro</span>
+      <section id="screen-newLot" class="screen">
+        <section class="panel">
+          <div class="section-head">
+            <span class="eyebrow">Produção</span>
             <h2 id="formTitle">Novo lote</h2>
-            <p>Adicione várias cores no mesmo dia e salve tudo de uma vez.</p>
+            <p>Informe data, quantidade e cor. Entrega não entra aqui.</p>
           </div>
-        </div>
 
-        <form id="batchForm">
-          <label>
-            Dia do lote
-            <input type="date" id="batchDate" required />
-          </label>
+          <form id="batchForm">
+            <label>
+              Data
+              <input id="batchDate" type="date" required />
+            </label>
 
-          <div class="delivery-box">
+            <div class="compact-row">
+              <label>
+                Modelo
+                <select id="modelSelect">
+                  <option value="">Nenhum modelo</option>
+                </select>
+              </label>
+
+              <button id="applyModel" class="btn ghost" type="button">Usar</button>
+            </div>
+
             <div>
-              <h3>Entrega feita?</h3>
-              <p>Marque “Sim” para adicionar R$ 5,00 ao saldo deste lote.</p>
+              <h3>Itens do lote</h3>
+              <div id="itemsArea"></div>
+
+              <button id="addItem" class="btn ghost full" type="button">+ Adicionar cor</button>
             </div>
 
-            <div class="delivery-toggle">
-              <button type="button" id="deliveryYes">Sim</button>
-              <button type="button" id="deliveryNo" class="active">Não</button>
+            <div class="preview">
+              <span>Prévia</span>
+              <strong id="lotPreview">0 botões • R$ 0,00</strong>
+              <small>Entrega será marcada depois no histórico.</small>
             </div>
 
-            <p id="deliveryText" class="delivery-status">
-              Sem entrega: nenhum valor extra será adicionado.
-            </p>
+            <div class="form-actions">
+              <button id="saveButton" class="btn primary" type="submit">Salvar lote</button>
+              <button id="saveAsModel" class="btn ghost" type="button">Salvar como modelo</button>
+              <button id="cancelEdit" class="btn dark" type="button">Cancelar edição</button>
+            </div>
+          </form>
+
+          <datalist id="colorSuggestions">
+            <option value="Branco"></option>
+            <option value="Preto"></option>
+            <option value="Pink"></option>
+            <option value="Marinho"></option>
+            <option value="Azul bb"></option>
+            <option value="Bege"></option>
+            <option value="Vermelho"></option>
+            <option value="Rosa bb"></option>
+            <option value="Salmão"></option>
+            <option value="Verde musgo"></option>
+            <option value="Lilás"></option>
+            <option value="Amarelo"></option>
+            <option value="Verde"></option>
+          </datalist>
+        </section>
+      </section>
+
+      <section id="screen-history" class="screen">
+        <section class="panel">
+          <div class="section-head">
+            <span class="eyebrow">Histórico</span>
+            <h2>Lotes registrados</h2>
+            <p>Confirme entregas, duplique, edite ou apague.</p>
           </div>
 
+          <div class="filters">
+            <label>
+              Data
+              <input id="filterDate" type="date" />
+            </label>
+
+            <label>
+              Cor
+              <input id="filterColor" type="text" placeholder="Ex: branco" />
+            </label>
+
+            <label>
+              Entrega
+              <select id="filterDelivery">
+                <option value="all">Todas</option>
+                <option value="yes">Confirmadas</option>
+                <option value="no">Pendentes</option>
+              </select>
+            </label>
+
+            <button id="clearFilters" class="btn ghost" type="button">Limpar</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div id="historyList"></div>
+        </section>
+      </section>
+
+      <section id="screen-closing" class="screen">
+        <section class="panel">
+          <div class="section-head">
+            <span class="eyebrow">Fechamento</span>
+            <h2>Fechamento do dia</h2>
+            <p>Resumo objetivo por data.</p>
+          </div>
+
+          <div class="compact-row">
+            <label>
+              Data
+              <input id="closingDate" type="date" />
+            </label>
+
+            <button id="downloadDayReport" class="btn primary" type="button">Baixar</button>
+          </div>
+
+          <div id="closingBox"></div>
+        </section>
+      </section>
+
+      <section id="screen-reports" class="screen">
+        <section class="panel split">
           <div>
-            <h3>Itens do lote</h3>
+            <span class="eyebrow">Relatório</span>
+            <h2>Relatório geral</h2>
+            <p>Baixe tudo em CSV.</p>
+          </div>
 
-            <div id="itemsArea"></div>
+          <button id="downloadReport" class="btn primary" type="button">Baixar geral</button>
+        </section>
 
-            <button id="addItem" class="btn btn-ghost full" type="button">
-              + Adicionar outra cor
-            </button>
+        <section class="panel">
+          <div class="section-head">
+            <span class="eyebrow">Período</span>
+            <h2>Relatório por período</h2>
+          </div>
+
+          <div class="period-grid">
+            <label>
+              Início
+              <input id="periodStart" type="date" />
+            </label>
+
+            <label>
+              Fim
+              <input id="periodEnd" type="date" />
+            </label>
+
+            <button id="downloadPeriodReport" class="btn ghost" type="button">Baixar período</button>
+          </div>
+        </section>
+      </section>
+
+      <section id="screen-backup" class="screen">
+        <section class="panel">
+          <div class="section-head">
+            <span class="eyebrow">Backup</span>
+            <h2>Segurança dos dados</h2>
+            <p>Sem banco de dados, exporte backup regularmente.</p>
           </div>
 
           <div class="form-actions">
-            <button id="saveButton" class="btn btn-primary" type="submit">
-              Salvar lote
-            </button>
+            <button id="exportBackup" class="btn primary" type="button">Exportar backup</button>
 
-            <button id="cancelEdit" class="btn btn-dark" type="button">
-              Cancelar edição
-            </button>
+            <label class="btn ghost file-btn">
+              Importar backup
+              <input id="importBackup" type="file" accept="application/json" />
+            </label>
           </div>
-        </form>
-
-        <datalist id="colorSuggestions">
-          <option value="Branco"></option>
-          <option value="Preto"></option>
-          <option value="Pink"></option>
-          <option value="Marinho"></option>
-          <option value="Azul bb"></option>
-          <option value="Bege"></option>
-          <option value="Vermelho"></option>
-          <option value="Rosa bb"></option>
-          <option value="Salmão"></option>
-          <option value="Verde musgo"></option>
-          <option value="Lilás"></option>
-          <option value="Amarelo"></option>
-          <option value="Verde"></option>
-        </datalist>
+        </section>
       </section>
 
-      <section class="panel">
-        <div class="section-head">
-          <div>
-            <span class="eyebrow">Busca</span>
-            <h2>Filtros</h2>
-            <p>Encontre lotes por dia, cor ou status de entrega.</p>
-          </div>
-        </div>
-
-        <div class="filters">
-          <label>
-            Data
-            <input type="date" id="filterDate" />
-          </label>
-
-          <label>
-            Cor
-            <input type="text" id="filterColor" placeholder="Ex: branco, pink, preto" />
-          </label>
-
-          <label>
-            Entrega
-            <select id="filterDelivery">
-              <option value="all">Todas</option>
-              <option value="yes">Com entrega</option>
-              <option value="no">Sem entrega</option>
-            </select>
-          </label>
-
-          <button id="clearFilters" class="btn btn-ghost" type="button">
-            Limpar
-          </button>
-        </div>
-      </section>
-
-      <section class="content-grid">
-        <div class="panel">
+      <section id="screen-settings" class="screen">
+        <section class="panel">
           <div class="section-head">
-            <div>
-              <span class="eyebrow">Ranking</span>
-              <h2>Resumo por cor</h2>
-              <p>Veja quais cores você mais produziu.</p>
-            </div>
+            <span class="eyebrow">Configurações</span>
+            <h2>Meta diária</h2>
           </div>
 
-          <div id="colorsSummary"></div>
-        </div>
+          <form id="goalForm">
+            <label>
+              Meta de botões por dia
+              <input id="dailyGoalInput" type="number" min="0" inputmode="numeric" placeholder="Ex: 500" />
+            </label>
 
-        <div class="panel">
-          <div class="section-head">
-            <div>
-              <span class="eyebrow">Registros</span>
-              <h2>Histórico de lotes</h2>
-              <p>Edite ou apague um lote. O saldo recalcula sozinho.</p>
-            </div>
-          </div>
+            <button class="btn primary" type="submit">Salvar meta</button>
+          </form>
+        </section>
 
-          <div id="historyList"></div>
-        </div>
-      </section>
+        <section class="panel">
+          <span class="eyebrow">Modelos salvos</span>
+          <h2>Modelos de lote</h2>
+          <div id="modelsList"></div>
+        </section>
 
-      <section class="panel report-panel">
-        <div>
-          <span class="eyebrow">Exportação</span>
-          <h2>Relatório</h2>
-          <p>Baixe uma planilha CSV com data, cor, quantidade, entrega e saldo.</p>
-        </div>
+        <section class="panel">
+          <span class="eyebrow">App</span>
+          <h2>Atualização</h2>
+          <p>Use se o GitHub foi atualizado, mas o app ainda mostra versão antiga.</p>
 
-        <button id="downloadReport" class="btn btn-primary" type="button">
-          Baixar relatório
-        </button>
-      </section>
+          <button id="refreshApp" class="btn ghost full" type="button">Atualizar app</button>
+        </section>
 
-      <section class="panel danger-panel">
-        <div>
-          <span class="eyebrow danger">Zona de cuidado</span>
-          <h2>Apagar histórico</h2>
-          <p>Use somente se quiser limpar todos os lotes salvos neste aparelho.</p>
-        </div>
+        <section class="panel danger-zone">
+          <span class="eyebrow danger">Perigo</span>
+          <h2>Apagar tudo</h2>
+          <p>Remove lotes, modelos e configurações deste aparelho.</p>
 
-        <button id="clearAll" class="btn btn-danger" type="button">
-          Apagar tudo
-        </button>
+          <button id="clearAll" class="btn danger full" type="button">Apagar tudo</button>
+        </section>
       </section>
     </main>
 
     <footer>
-      <p>
-        Cada botão vale <strong>R$ 0,05</strong> • Cada entrega vale <strong>R$ 5,00</strong>
-      </p>
-      <p>
-        Histórico salvo localmente neste aparelho.
-      </p>
+      <p>Botão: <strong>R$ 0,05</strong> • Entrega: <strong>R$ 5,00</strong></p>
+      <p>Dados salvos localmente neste aparelho.</p>
     </footer>
   </div>
 
