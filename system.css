@@ -3,14 +3,12 @@
 :root {
   --bg: #050816;
   --panel: rgba(255, 255, 255, 0.075);
-  --panel2: rgba(255, 255, 255, 0.11);
   --border: rgba(255, 255, 255, 0.13);
   --text: #f8fafc;
   --muted: #9ca3af;
   --green: #35f5a3;
   --cyan: #22d3ee;
   --blue: #60a5fa;
-  --yellow: #facc15;
   --red: #fb7185;
   --shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
 }
@@ -494,10 +492,7 @@ input::placeholder {
   cursor: pointer;
 }
 
-.compact-row,
-.form-actions,
-.filters,
-.period-grid {
+.form-actions {
   display: grid;
   gap: 10px;
 }
@@ -507,8 +502,7 @@ input::placeholder {
 }
 
 .preview,
-.last-card,
-.closing-card {
+.last-card {
   padding: 16px;
   border: 1px solid rgba(53,245,163,0.20);
   border-radius: 22px;
@@ -556,22 +550,17 @@ input::placeholder {
   transition: 0.25s;
 }
 
-.history-day {
-  margin-bottom: 18px;
-}
-
-.day-title {
-  color: #bbf7d0;
-  font-size: 17px;
-}
-
-.history-card,
-.model-card {
+.history-card {
   margin-bottom: 13px;
   padding: 15px;
   border: 1px solid rgba(255,255,255,0.11);
   border-radius: 22px;
   background: rgba(255,255,255,0.052);
+}
+
+.history-card h3 {
+  margin-bottom: 12px;
+  color: #bbf7d0;
 }
 
 .chips {
@@ -623,35 +612,10 @@ input::placeholder {
   color: #bbf7d0;
 }
 
-.history-actions,
-.model-actions {
+.history-actions {
   display: grid;
   gap: 8px;
   margin-top: 12px;
-}
-
-.closing-grid,
-.settings-grid {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.closing-grid div,
-.settings-grid div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 15px;
-  background: rgba(255,255,255,0.055);
-}
-
-.closing-grid strong,
-.settings-grid strong {
-  color: #bbf7d0;
-  text-align: right;
 }
 
 .empty {
@@ -659,16 +623,6 @@ input::placeholder {
   text-align: center;
   color: #92a0b4;
   font-weight: 700;
-}
-
-.file-btn {
-  display: grid;
-  place-items: center;
-  text-align: center;
-}
-
-.file-btn input {
-  display: none;
 }
 
 .toast {
@@ -732,40 +686,12 @@ footer strong {
     grid-template-columns: 1fr 1fr;
   }
 
-  .filters {
-    grid-template-columns: 1fr 1fr 170px 130px;
-    align-items: end;
-  }
-
-  .compact-row {
-    grid-template-columns: 1fr 110px;
-    align-items: end;
-  }
-
-  .period-grid {
-    grid-template-columns: 1fr 1fr 180px;
-    align-items: end;
-  }
-
   .form-actions {
     grid-template-columns: 1fr 1fr;
   }
 
-  #cancelEdit {
-    grid-column: span 2;
-  }
-
   .history-actions {
     grid-template-columns: repeat(4, 1fr);
-  }
-
-  .model-actions {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .closing-grid,
-  .settings-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 
