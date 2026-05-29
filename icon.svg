@@ -1,16 +1,46 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="116" fill="#050816"/>
-  <rect x="42" y="42" width="428" height="428" rx="92" fill="url(#g)"/>
-  <circle cx="256" cy="256" r="140" fill="#050816" fill-opacity="0.88"/>
-  <circle cx="204" cy="212" r="30" fill="#35F5A3"/>
-  <circle cx="308" cy="212" r="30" fill="#22D3EE"/>
-  <circle cx="204" cy="316" r="30" fill="#FACC15"/>
-  <circle cx="308" cy="316" r="30" fill="#FFFFFF"/>
-  <text x="256" y="279" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="74" font-weight="900">CB</text>
+  <rect width="512" height="512" rx="118" fill="#050816"/>
+
+  <rect x="34" y="34" width="444" height="444" rx="100" fill="url(#bgGradient)"/>
+
+  <rect x="58" y="58" width="396" height="396" rx="82" fill="#07111F" fill-opacity="0.92"/>
+
+  <circle cx="256" cy="256" r="136" fill="url(#innerGlow)" opacity="0.95"/>
+
+  <circle cx="206" cy="206" r="34" fill="#35F5A3"/>
+  <circle cx="306" cy="206" r="34" fill="#22D3EE"/>
+  <circle cx="206" cy="306" r="34" fill="#FACC15"/>
+  <circle cx="306" cy="306" r="34" fill="#F8FAFC"/>
+
+  <circle cx="206" cy="206" r="11" fill="#050816" fill-opacity="0.88"/>
+  <circle cx="306" cy="206" r="11" fill="#050816" fill-opacity="0.88"/>
+  <circle cx="206" cy="306" r="11" fill="#050816" fill-opacity="0.88"/>
+  <circle cx="306" cy="306" r="11" fill="#050816" fill-opacity="0.88"/>
+
+  <path d="M256 157C310.676 157 355 201.324 355 256C355 310.676 310.676 355 256 355C201.324 355 157 310.676 157 256C157 201.324 201.324 157 256 157Z" stroke="white" stroke-opacity="0.08" stroke-width="18"/>
+
+  <text x="256" y="277" text-anchor="middle" fill="#F8FAFC" font-family="Arial, Helvetica, sans-serif" font-size="76" font-weight="900" letter-spacing="-5">
+    BP
+  </text>
+
+  <path d="M151 390C179 410 214 422 256 422C298 422 333 410 361 390" stroke="url(#lineGradient)" stroke-width="10" stroke-linecap="round"/>
+
   <defs>
-    <linearGradient id="g" x1="42" y1="42" x2="470" y2="470" gradientUnits="userSpaceOnUse">
+    <linearGradient id="bgGradient" x1="34" y1="34" x2="478" y2="478" gradientUnits="userSpaceOnUse">
       <stop stop-color="#35F5A3"/>
-      <stop offset="0.52" stop-color="#22D3EE"/>
+      <stop offset="0.48" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#FACC15"/>
+    </linearGradient>
+
+    <radialGradient id="innerGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 256) rotate(90) scale(136)">
+      <stop stop-color="#102033"/>
+      <stop offset="0.58" stop-color="#07111F"/>
+      <stop offset="1" stop-color="#050816"/>
+    </radialGradient>
+
+    <linearGradient id="lineGradient" x1="151" y1="390" x2="361" y2="390" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#35F5A3"/>
+      <stop offset="0.5" stop-color="#22D3EE"/>
       <stop offset="1" stop-color="#FACC15"/>
     </linearGradient>
   </defs>
