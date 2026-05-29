@@ -1,12 +1,11 @@
 const VALUE_BUTTON = 0.05;
 const VALUE_DELIVERY = 5;
 
-const STORAGE_KEY = "botoesProCleanV1";
-const LAST_SAVE_KEY = "botoesProCleanLastSave";
+const STORAGE_KEY = "botoesProFinalCleanV1";
+const LAST_SAVE_KEY = "botoesProFinalCleanLastSave";
 
 const defaultState = {
   lots: [],
-  models: [],
   settings: {
     dailyGoal: 0
   }
@@ -23,9 +22,7 @@ const screenNames = {
   home: "Início",
   newLot: "Novo lote",
   history: "Histórico",
-  closing: "Fechamento",
-  reports: "Relatórios",
-  backup: "Backup",
+  reports: "Relatório",
   settings: "Configurações"
 };
 
@@ -39,9 +36,6 @@ const batchForm = $("#batchForm");
 const batchDate = $("#batchDate");
 const itemsArea = $("#itemsArea");
 const addItem = $("#addItem");
-const modelSelect = $("#modelSelect");
-const applyModel = $("#applyModel");
-const saveAsModel = $("#saveAsModel");
 const lotPreview = $("#lotPreview");
 const formTitle = $("#formTitle");
 const saveButton = $("#saveButton");
@@ -57,20 +51,9 @@ const goalText = $("#goalText");
 const goalBar = $("#goalBar");
 const lastLotBox = $("#lastLotBox");
 
-const filterDate = $("#filterDate");
-const filterColor = $("#filterColor");
-const filterDelivery = $("#filterDelivery");
 const historyList = $("#historyList");
 
-const closingDate = $("#closingDate");
-const closingBox = $("#closingBox");
-
-const periodStart = $("#periodStart");
-const periodEnd = $("#periodEnd");
-
 const dailyGoalInput = $("#dailyGoalInput");
-const modelsList = $("#modelsList");
-
 const toast = $("#toast");
 
 function safeParse(text) {
@@ -87,13 +70,17 @@ function createId() {
 
 function todayISO() {
   const date = new Date();
+
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function formatDate(date) {
-  if (!date || !date.includes("-")) return date || "";
-  const [y, m, d] = date.split("-");
-  return `${d}/${m}/${y}`;
+  if (!date || !date.includes("-")) {
+    return date || "";
+  }
+
+  const [year, month, day] = date.split("-");
+  return `${day}/${month}/${year}`;
 }
 
 function money(value) {
@@ -128,22 +115,6 @@ function normalizeLot(raw) {
   };
 }
 
-function normalizeModel(raw) {
-  const items = raw.items || [];
-
-  return {
-    id: String(raw.id || createId()),
-    name: String(raw.name || "Modelo").trim(),
-    items: items
-      .map((item) => ({
-        color: String(item.color || "").trim(),
-        quantity: Number(item.quantity || 0)
-      }))
-      .filter((item) => item.color && item.quantity > 0),
-    createdAtMillis: Number(raw.createdAtMillis || Date.now())
-  };
-}
-
 function loadState() {
   const saved = safeParse(localStorage.getItem(STORAGE_KEY));
 
@@ -155,12 +126,12 @@ function loadState() {
         ...defaultState.settings,
         ...(saved.settings || {})
       },
-      lots: Array.isArray(saved.lots) ? saved.lots.map(normalizeLot) : [],
-      models: Array.isArray(saved.models) ? saved.models.map(normalizeModel) : []
+      lots: Array.isArray(saved.lots) ? saved.lots.map(normalizeLot) : []
     };
   }
 
   const oldKeys = [
+    "botoesProCleanV1",
     "botoesProUltimateV1",
     "botoesProAppTabsV1",
     "controleBotoesLocalAppV1",
@@ -174,7 +145,6 @@ function loadState() {
       return {
         ...defaultState,
         lots: old.lots.map(normalizeLot),
-        models: Array.isArray(old.models) ? old.models.map(normalizeModel) : [],
         settings: {
           ...defaultState.settings,
           ...(old.settings || {})
@@ -216,7 +186,10 @@ function closeSidebar() {
 }
 
 function goToScreen(name) {
-  $$(".screen").forEach((screen) => screen.classList.remove("active"));
+  $$(".screen").forEach((screen) => {
+    screen.classList.remove("active");
+  });
+
   $(`#screen-${name}`)?.classList.add("active");
 
   $$(".nav-link").forEach((button) => {
@@ -289,17 +262,20 @@ function collectItems(container) {
 function updatePreview() {
   const items = collectItems(itemsArea);
   const buttons = items.reduce((sum, item) => sum + item.quantity, 0);
+
   lotPreview.textContent = `${buttons} botões • ${money(buttons * VALUE_BUTTON)}`;
 }
 
 function clearForm() {
   editingId = null;
+
   formTitle.textContent = "Novo lote";
   saveButton.textContent = "Salvar lote";
   cancelEdit.style.display = "none";
 
   batchDate.value = todayISO();
   itemsArea.innerHTML = "";
+
   createItemRow(itemsArea);
   updatePreview();
 }
@@ -345,6 +321,7 @@ function renderDashboard() {
   const percent = goal > 0 ? Math.min(100, Math.round((todayStats.buttons / goal) * 100)) : 0;
 
   goalPercent.textContent = goal > 0 ? `${percent}%` : "Sem meta";
+
   goalText.textContent = goal > 0
     ? `${todayStats.buttons} de ${goal} botões hoje.`
     : "Configure uma meta nas configurações.";
@@ -373,70 +350,24 @@ function renderLastLot() {
   `;
 }
 
-function filteredLots() {
-  let list = [...state.lots];
+function renderHistory() {
+  const lots = [...state.lots].sort((a, b) => {
+    if (a.date !== b.date) {
+      return b.date.localeCompare(a.date);
+    }
 
-  if (filterDate.value) {
-    list = list.filter((lot) => lot.date === filterDate.value);
-  }
-
-  if (filterColor.value.trim()) {
-    const search = normalizeText(filterColor.value);
-
-    list = list.filter((lot) => {
-      return lot.items.some((item) => normalizeText(item.color).includes(search));
-    });
-  }
-
-  if (filterDelivery.value === "yes") {
-    list = list.filter((lot) => lot.deliveryDone);
-  }
-
-  if (filterDelivery.value === "no") {
-    list = list.filter((lot) => !lot.deliveryDone);
-  }
-
-  return list.sort((a, b) => {
-    if (a.date !== b.date) return b.date.localeCompare(a.date);
     return b.createdAtMillis - a.createdAtMillis;
   });
-}
 
-function groupByDate(lots) {
-  return lots.reduce((groups, lot) => {
-    groups[lot.date] = groups[lot.date] || [];
-    groups[lot.date].push(lot);
-    return groups;
-  }, {});
-}
-
-function renderHistory() {
-  const lots = filteredLots();
   historyList.innerHTML = "";
 
   if (!lots.length) {
-    historyList.innerHTML = `<div class="empty">Nenhum lote encontrado.</div>`;
+    historyList.innerHTML = `<div class="empty">Nenhum lote registrado ainda.</div>`;
     return;
   }
 
-  const groups = groupByDate(lots);
-
-  Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach((date) => {
-    const dayLots = groups[date];
-    const stats = getStats(dayLots);
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "history-day";
-
-    wrapper.innerHTML = `
-      <h3 class="day-title">${formatDate(date)} • ${stats.buttons} botões • ${money(stats.total)}</h3>
-    `;
-
-    dayLots.forEach((lot) => {
-      wrapper.appendChild(createHistoryCard(lot));
-    });
-
-    historyList.appendChild(wrapper);
+  lots.forEach((lot) => {
+    historyList.appendChild(createHistoryCard(lot));
   });
 }
 
@@ -447,6 +378,8 @@ function createHistoryCard(lot) {
   card.className = "history-card";
 
   card.innerHTML = `
+    <h3>${formatDate(lot.date)}</h3>
+
     <div class="chips">
       <span class="chip">${buttons} botões</span>
       <span class="chip">${money(buttons * VALUE_BUTTON)}</span>
@@ -485,75 +418,9 @@ function createHistoryCard(lot) {
   return card;
 }
 
-function renderClosing() {
-  const date = closingDate.value || todayISO();
-  closingDate.value = date;
-
-  const lots = getLotsByDate(date);
-  const stats = getStats(lots);
-
-  if (!lots.length) {
-    closingBox.innerHTML = `<div class="empty">Nenhum lote em ${formatDate(date)}.</div>`;
-    return;
-  }
-
-  closingBox.innerHTML = `
-    <div class="closing-card">
-      <h3>${formatDate(date)}</h3>
-
-      <div class="closing-grid">
-        <div><span>Botões</span><strong>${stats.buttons}</strong></div>
-        <div><span>Valor botões</span><strong>${money(stats.buttonValue)}</strong></div>
-        <div><span>Entregas</span><strong>${stats.deliveries}</strong></div>
-        <div><span>Valor entregas</span><strong>${money(stats.deliveryValue)}</strong></div>
-        <div><span>Lotes</span><strong>${lots.length}</strong></div>
-        <div><span>Total</span><strong>${money(stats.total)}</strong></div>
-      </div>
-    </div>
-  `;
-}
-
-function renderModels() {
-  modelSelect.innerHTML = `<option value="">Nenhum modelo</option>`;
-
-  state.models.forEach((model) => {
-    const option = document.createElement("option");
-    option.value = model.id;
-    option.textContent = model.name;
-    modelSelect.appendChild(option);
-  });
-
-  if (!state.models.length) {
-    modelsList.innerHTML = `<div class="empty">Nenhum modelo salvo.</div>`;
-    return;
-  }
-
-  modelsList.innerHTML = state.models.map((model) => `
-    <article class="model-card">
-      <h3>${model.name}</h3>
-
-      <ul class="items-list">
-        ${model.items.map((item) => `
-          <li>
-            <span>${item.quantity} ${item.color}</span>
-            <strong>${money(item.quantity * VALUE_BUTTON)}</strong>
-          </li>
-        `).join("")}
-      </ul>
-
-      <div class="model-actions">
-        <button class="btn primary" data-model-use="${model.id}" type="button">Usar</button>
-        <button class="btn danger" data-model-delete="${model.id}" type="button">Apagar</button>
-      </div>
-    </article>
-  `).join("");
-}
-
 function renderAll() {
   renderDashboard();
   renderHistory();
-  renderClosing();
-  renderModels();
   renderLastSave();
 
   dailyGoalInput.value = state.settings.dailyGoal || "";
@@ -573,7 +440,10 @@ function saveLot(event) {
 
   if (buttons > 5000) {
     const ok = confirm(`Você está salvando ${buttons} botões. Está correto?`);
-    if (!ok) return;
+
+    if (!ok) {
+      return;
+    }
   }
 
   const old = state.lots.find((lot) => lot.id === editingId);
@@ -587,7 +457,10 @@ function saveLot(event) {
   };
 
   if (editingId) {
-    state.lots = state.lots.map((item) => item.id === editingId ? lot : item);
+    state.lots = state.lots.map((item) => {
+      return item.id === editingId ? lot : item;
+    });
+
     showToast("Lote atualizado.");
   } else {
     state.lots.push(lot);
@@ -609,6 +482,7 @@ function editLot(id) {
   }
 
   editingId = lot.id;
+
   formTitle.textContent = "Editando lote";
   saveButton.textContent = "Atualizar lote";
   cancelEdit.style.display = "block";
@@ -633,6 +507,7 @@ function duplicateLot(id) {
   }
 
   editingId = null;
+
   formTitle.textContent = "Novo lote duplicado";
   saveButton.textContent = "Salvar lote";
   cancelEdit.style.display = "none";
@@ -650,7 +525,9 @@ function duplicateLot(id) {
 }
 
 function deleteLot(id) {
-  if (!confirm("Apagar este lote?")) return;
+  if (!confirm("Apagar este lote?")) {
+    return;
+  }
 
   state.lots = state.lots.filter((lot) => lot.id !== id);
 
@@ -660,6 +537,7 @@ function deleteLot(id) {
 
   saveState();
   renderAll();
+
   showToast("Lote apagado.");
 }
 
@@ -677,74 +555,6 @@ function toggleDelivery(id) {
   renderAll();
 
   showToast(lot.deliveryDone ? "Entrega confirmada: + R$ 5,00." : "Entrega removida.");
-}
-
-function saveCurrentAsModel() {
-  const items = collectItems(itemsArea);
-
-  if (!items.length) {
-    showToast("Adicione itens antes de salvar modelo.");
-    return;
-  }
-
-  const name = prompt("Nome do modelo:");
-
-  if (!name || !name.trim()) {
-    return;
-  }
-
-  state.models.push({
-    id: createId(),
-    name: name.trim(),
-    items,
-    createdAtMillis: Date.now()
-  });
-
-  saveState();
-  renderAll();
-  showToast("Modelo salvo.");
-}
-
-function useModel(id) {
-  const model = state.models.find((item) => item.id === id);
-
-  if (!model) {
-    showToast("Modelo não encontrado.");
-    return;
-  }
-
-  editingId = null;
-  formTitle.textContent = "Novo lote";
-  saveButton.textContent = "Salvar lote";
-  cancelEdit.style.display = "none";
-
-  batchDate.value = todayISO();
-  itemsArea.innerHTML = "";
-
-  model.items.forEach((item) => {
-    createItemRow(itemsArea, item.quantity, item.color);
-  });
-
-  updatePreview();
-  goToScreen("newLot");
-}
-
-function applySelectedModel() {
-  if (!modelSelect.value) {
-    showToast("Escolha um modelo.");
-    return;
-  }
-
-  useModel(modelSelect.value);
-}
-
-function deleteModel(id) {
-  if (!confirm("Apagar este modelo?")) return;
-
-  state.models = state.models.filter((model) => model.id !== id);
-  saveState();
-  renderAll();
-  showToast("Modelo apagado.");
 }
 
 function buildCSV(lots) {
@@ -812,74 +622,28 @@ function downloadCSV(lots, filename) {
   showToast("Relatório baixado.");
 }
 
-function exportBackup() {
-  const backup = {
-    app: "Botões Pro",
-    exportedAt: new Date().toISOString(),
-    state
-  };
-
-  downloadFile(
-    JSON.stringify(backup, null, 2),
-    `backup-botoes-pro-${todayISO()}.json`,
-    "application/json;charset=utf-8;"
-  );
-
-  showToast("Backup exportado.");
-}
-
-function importBackup(event) {
-  const file = event.target.files[0];
-
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    const data = safeParse(reader.result);
-    const importedState = data?.state || data;
-
-    if (!importedState || !Array.isArray(importedState.lots)) {
-      showToast("Backup inválido.");
-      return;
-    }
-
-    if (!confirm("Importar backup e substituir os dados atuais?")) return;
-
-    state = {
-      ...defaultState,
-      ...importedState,
-      settings: {
-        ...defaultState.settings,
-        ...(importedState.settings || {})
-      },
-      lots: importedState.lots.map(normalizeLot),
-      models: Array.isArray(importedState.models) ? importedState.models.map(normalizeModel) : []
-    };
-
-    saveState();
-    renderAll();
-    showToast("Backup importado.");
-  };
-
-  reader.readAsText(file);
-  event.target.value = "";
-}
-
 function clearAll() {
-  if (!confirm("Apagar todos os dados deste aparelho?")) return;
-  if (!confirm("Última confirmação. Essa ação não pode ser desfeita.")) return;
+  if (!confirm("Apagar todos os dados deste aparelho?")) {
+    return;
+  }
+
+  if (!confirm("Última confirmação. Essa ação não pode ser desfeita.")) {
+    return;
+  }
 
   state = structuredClone(defaultState);
+
   saveState();
   clearForm();
   renderAll();
+
   showToast("Tudo apagado.");
 }
 
 async function refreshApp() {
   if ("caches" in window) {
     const keys = await caches.keys();
+
     await Promise.all(keys.map((key) => caches.delete(key)));
   }
 
@@ -909,7 +673,9 @@ function setupInstall() {
 }
 
 function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) return;
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
 
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js").catch(console.error);
@@ -925,17 +691,19 @@ $("#closeMenu").addEventListener("click", closeSidebar);
 overlay.addEventListener("click", closeSidebar);
 
 $$(".nav-link").forEach((button) => {
-  button.addEventListener("click", () => goToScreen(button.dataset.screen));
+  button.addEventListener("click", () => {
+    goToScreen(button.dataset.screen);
+  });
 });
 
 $$("[data-go]").forEach((button) => {
-  button.addEventListener("click", () => goToScreen(button.dataset.go));
+  button.addEventListener("click", () => {
+    goToScreen(button.dataset.go);
+  });
 });
 
 batchForm.addEventListener("submit", saveLot);
 addItem.addEventListener("click", () => createItemRow(itemsArea));
-saveAsModel.addEventListener("click", saveCurrentAsModel);
-applyModel.addEventListener("click", applySelectedModel);
 
 cancelEdit.addEventListener("click", () => {
   clearForm();
@@ -944,73 +712,43 @@ cancelEdit.addEventListener("click", () => {
 
 historyList.addEventListener("click", (event) => {
   const button = event.target.closest("button");
-  if (!button) return;
+
+  if (!button) {
+    return;
+  }
 
   const id = button.dataset.id;
   const action = button.dataset.action;
 
-  if (action === "delivery") toggleDelivery(id);
-  if (action === "duplicate") duplicateLot(id);
-  if (action === "edit") editLot(id);
-  if (action === "delete") deleteLot(id);
-});
+  if (action === "delivery") {
+    toggleDelivery(id);
+  }
 
-modelsList.addEventListener("click", (event) => {
-  const useButton = event.target.closest("[data-model-use]");
-  const deleteButton = event.target.closest("[data-model-delete]");
+  if (action === "duplicate") {
+    duplicateLot(id);
+  }
 
-  if (useButton) useModel(useButton.dataset.modelUse);
-  if (deleteButton) deleteModel(deleteButton.dataset.modelDelete);
-});
+  if (action === "edit") {
+    editLot(id);
+  }
 
-filterDate.addEventListener("change", renderHistory);
-filterColor.addEventListener("input", renderHistory);
-filterDelivery.addEventListener("change", renderHistory);
-
-$("#clearFilters").addEventListener("click", () => {
-  filterDate.value = "";
-  filterColor.value = "";
-  filterDelivery.value = "all";
-  renderHistory();
-});
-
-closingDate.addEventListener("change", renderClosing);
-
-$("#downloadDayReport").addEventListener("click", () => {
-  const date = closingDate.value || todayISO();
-  downloadCSV(getLotsByDate(date), `fechamento-${date}.csv`);
+  if (action === "delete") {
+    deleteLot(id);
+  }
 });
 
 $("#downloadReport").addEventListener("click", () => {
   downloadCSV(state.lots, `relatorio-geral-${todayISO()}.csv`);
 });
 
-$("#downloadPeriodReport").addEventListener("click", () => {
-  const start = periodStart.value;
-  const end = periodEnd.value;
-
-  if (!start || !end) {
-    showToast("Escolha início e fim.");
-    return;
-  }
-
-  if (start > end) {
-    showToast("Data inicial maior que a final.");
-    return;
-  }
-
-  const lots = state.lots.filter((lot) => lot.date >= start && lot.date <= end);
-  downloadCSV(lots, `relatorio-${start}-a-${end}.csv`);
-});
-
-$("#exportBackup").addEventListener("click", exportBackup);
-$("#importBackup").addEventListener("change", importBackup);
-
 $("#goalForm").addEventListener("submit", (event) => {
   event.preventDefault();
+
   state.settings.dailyGoal = Number(dailyGoalInput.value || 0);
+
   saveState();
   renderAll();
+
   showToast("Meta salva.");
 });
 
@@ -1019,12 +757,6 @@ $("#clearAll").addEventListener("click", clearAll);
 
 window.addEventListener("online", updateConnection);
 window.addEventListener("offline", updateConnection);
-
-closingDate.value = todayISO();
-periodStart.value = todayISO();
-periodEnd.value = todayISO();
-
-dailyGoalInput.value = state.settings.dailyGoal || "";
 
 clearForm();
 setupInstall();
