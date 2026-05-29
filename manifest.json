@@ -1,13 +1,13 @@
 {
-  "name": "Controle de Botões Pro",
+  "name": "Botões Pro",
   "short_name": "Botões Pro",
-  "description": "Aplicativo para controlar produção de botões, saldo, entregas e relatórios.",
+  "description": "Aplicativo local para controlar produção de botões, saldo, entregas, histórico e relatório.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#060811",
-  "theme_color": "#35f5a3",
+  "background_color": "#050816",
+  "theme_color": "#0f172a",
   "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
