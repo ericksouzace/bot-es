@@ -1,4 +1,4 @@
-const CACHE_NAME = "botoes-pro-clean-v1";
+const CACHE_NAME = "botoes-pro-final-clean-v1";
 
 const CORE_ASSETS = [
   "./",
@@ -36,7 +36,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const request = event.request;
 
-  if (request.method !== "GET") return;
+  if (request.method !== "GET") {
+    return;
+  }
 
   if (request.mode === "navigate") {
     event.respondWith(
@@ -58,7 +60,9 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(request).then((cached) => {
-      if (cached) return cached;
+      if (cached) {
+        return cached;
+      }
 
       return fetch(request)
         .then((response) => {
