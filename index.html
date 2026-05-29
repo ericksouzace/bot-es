@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Controle de Botões Pro</title>
+
+  <meta name="theme-color" content="#35f5a3" />
+  <meta name="description" content="Aplicativo de controle de produção de botões, saldo e entregas." />
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Botões Pro" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <link rel="stylesheet" href="system.css" />
+</head>
+
+<body>
+  <div class="background-grid"></div>
+  <div class="orb orb-green"></div>
+  <div class="orb orb-blue"></div>
+  <div class="orb orb-gold"></div>
+
+  <div class="app">
+    <header class="hero">
+      <div class="hero-content">
+        <div class="brand-line">
+          <span class="brand-mark">CB</span>
+          <span class="brand-text">Controle de Botões Pro</span>
+        </div>
+
+        <h1>Produção, saldo e entregas em um painel só.</h1>
+
+        <p>
+          Registre lotes completos, acompanhe suas cores, some automaticamente
+          R$ 0,05 por botão e R$ 5,00 por entrega. Tudo salvo no próprio aparelho.
+        </p>
+
+        <div class="hero-actions">
+          <button id="installApp" class="btn btn-ghost" type="button">
+            Instalar app
+          </button>
+
+          <button id="downloadReportTop" class="btn btn-primary" type="button">
+            Baixar relatório
+          </button>
+        </div>
+      </div>
+
+      <div class="hero-card">
+        <span>Saldo atual</span>
+        <strong id="heroBalance">R$ 0,00</strong>
+        <small>Salvo neste aparelho</small>
+      </div>
+    </header>
+
+    <main>
+      <section class="dashboard">
+        <article class="metric metric-main">
+          <span>Saldo geral</span>
+          <strong id="generalBalance">R$ 0,00</strong>
+          <small>Botões + entregas</small>
+        </article>
+
+        <article class="metric">
+          <span>Saldo hoje</span>
+          <strong id="todayBalance">R$ 0,00</strong>
+          <small>Somente a data atual</small>
+        </article>
+
+        <article class="metric">
+          <span>Botões hoje</span>
+          <strong id="todayButtons">0</strong>
+          <small>Produção do dia</small>
+        </article>
+
+        <article class="metric">
+          <span>Total de botões</span>
+          <strong id="generalButtons">0</strong>
+          <small>Todos os lotes</small>
+        </article>
+
+        <article class="metric">
+          <span>Entregas feitas</span>
+          <strong id="deliveryCount">0</strong>
+          <small>R$ 5,00 cada</small>
+        </article>
+      </section>
+
+      <section id="formPanel" class="panel panel-form">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Novo registro</span>
+            <h2 id="formTitle">Novo lote</h2>
+            <p>Adicione várias cores no mesmo dia e salve tudo de uma vez.</p>
+          </div>
+        </div>
+
+        <form id="batchForm">
+          <label>
+            Dia do lote
+            <input type="date" id="batchDate" required />
+          </label>
+
+          <div class="delivery-box">
+            <div>
+              <h3>Entrega feita?</h3>
+              <p>Marque “Sim” para adicionar R$ 5,00 ao saldo deste lote.</p>
+            </div>
+
+            <div class="delivery-toggle">
+              <button type="button" id="deliveryYes">Sim</button>
+              <button type="button" id="deliveryNo" class="active">Não</button>
+            </div>
+
+            <p id="deliveryText" class="delivery-status">
+              Sem entrega: nenhum valor extra será adicionado.
+            </p>
+          </div>
+
+          <div>
+            <h3>Itens do lote</h3>
+
+            <div id="itemsArea"></div>
+
+            <button id="addItem" class="btn btn-ghost full" type="button">
+              + Adicionar outra cor
+            </button>
+          </div>
+
+          <div class="form-actions">
+            <button id="saveButton" class="btn btn-primary" type="submit">
+              Salvar lote
+            </button>
+
+            <button id="cancelEdit" class="btn btn-dark" type="button">
+              Cancelar edição
+            </button>
+          </div>
+        </form>
+
+        <datalist id="colorSuggestions">
+          <option value="Branco"></option>
+          <option value="Preto"></option>
+          <option value="Pink"></option>
+          <option value="Marinho"></option>
+          <option value="Azul bb"></option>
+          <option value="Bege"></option>
+          <option value="Vermelho"></option>
+          <option value="Rosa bb"></option>
+          <option value="Salmão"></option>
+          <option value="Verde musgo"></option>
+          <option value="Lilás"></option>
+          <option value="Amarelo"></option>
+          <option value="Verde"></option>
+        </datalist>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Busca</span>
+            <h2>Filtros</h2>
+            <p>Encontre lotes por dia, cor ou status de entrega.</p>
+          </div>
+        </div>
+
+        <div class="filters">
+          <label>
+            Data
+            <input type="date" id="filterDate" />
+          </label>
+
+          <label>
+            Cor
+            <input type="text" id="filterColor" placeholder="Ex: branco, pink, preto" />
+          </label>
+
+          <label>
+            Entrega
+            <select id="filterDelivery">
+              <option value="all">Todas</option>
+              <option value="yes">Com entrega</option>
+              <option value="no">Sem entrega</option>
+            </select>
+          </label>
+
+          <button id="clearFilters" class="btn btn-ghost" type="button">
+            Limpar
+          </button>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Ranking</span>
+              <h2>Resumo por cor</h2>
+              <p>Veja quais cores você mais produziu.</p>
+            </div>
+          </div>
+
+          <div id="colorsSummary"></div>
+        </div>
+
+        <div class="panel">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Registros</span>
+              <h2>Histórico de lotes</h2>
+              <p>Edite ou apague um lote. O saldo recalcula sozinho.</p>
+            </div>
+          </div>
+
+          <div id="historyList"></div>
+        </div>
+      </section>
+
+      <section class="panel report-panel">
+        <div>
+          <span class="eyebrow">Exportação</span>
+          <h2>Relatório</h2>
+          <p>Baixe uma planilha CSV com data, cor, quantidade, entrega e saldo.</p>
+        </div>
+
+        <button id="downloadReport" class="btn btn-primary" type="button">
+          Baixar relatório
+        </button>
+      </section>
+
+      <section class="panel danger-panel">
+        <div>
+          <span class="eyebrow danger">Zona de cuidado</span>
+          <h2>Apagar histórico</h2>
+          <p>Use somente se quiser limpar todos os lotes salvos neste aparelho.</p>
+        </div>
+
+        <button id="clearAll" class="btn btn-danger" type="button">
+          Apagar tudo
+        </button>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Cada botão vale <strong>R$ 0,05</strong> • Cada entrega vale <strong>R$ 5,00</strong>
+      </p>
+      <p>
+        Histórico salvo localmente neste aparelho.
+      </p>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
