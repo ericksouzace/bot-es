@@ -7,7 +7,7 @@
   <title>Botões Pro</title>
 
   <meta name="theme-color" content="#0f172a" />
-  <meta name="description" content="Controle local de produção de botões, saldo, entregas, histórico, relatórios e backup." />
+  <meta name="description" content="Controle local de produção de botões, saldo, entregas, histórico e relatório." />
 
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -43,9 +43,7 @@
       <button class="nav-link active" data-screen="home" type="button">Início</button>
       <button class="nav-link" data-screen="newLot" type="button">Novo lote</button>
       <button class="nav-link" data-screen="history" type="button">Histórico</button>
-      <button class="nav-link" data-screen="closing" type="button">Fechamento</button>
-      <button class="nav-link" data-screen="reports" type="button">Relatórios</button>
-      <button class="nav-link" data-screen="backup" type="button">Backup</button>
+      <button class="nav-link" data-screen="reports" type="button">Relatório</button>
       <button class="nav-link" data-screen="settings" type="button">Configurações</button>
     </nav>
 
@@ -82,7 +80,7 @@
             </div>
 
             <h1>Controle limpo. Ganho claro.</h1>
-            <p>Registre lotes, confirme entregas depois e acompanhe o saldo sem bagunça.</p>
+            <p>Registre lotes, confirme entregas depois e acompanhe seu saldo sem bagunça.</p>
           </div>
 
           <div class="balance-card">
@@ -161,17 +159,6 @@
               <input id="batchDate" type="date" required />
             </label>
 
-            <div class="compact-row">
-              <label>
-                Modelo
-                <select id="modelSelect">
-                  <option value="">Nenhum modelo</option>
-                </select>
-              </label>
-
-              <button id="applyModel" class="btn ghost" type="button">Usar</button>
-            </div>
-
             <div>
               <h3>Itens do lote</h3>
               <div id="itemsArea"></div>
@@ -187,7 +174,6 @@
 
             <div class="form-actions">
               <button id="saveButton" class="btn primary" type="submit">Salvar lote</button>
-              <button id="saveAsModel" class="btn ghost" type="button">Salvar como modelo</button>
               <button id="cancelEdit" class="btn dark" type="button">Cancelar edição</button>
             </div>
           </form>
@@ -214,57 +200,11 @@
         <section class="panel">
           <div class="section-head">
             <span class="eyebrow">Histórico</span>
-            <h2>Lotes registrados</h2>
-            <p>Confirme entregas, duplique, edite ou apague.</p>
+            <h2>Todos os lotes</h2>
+            <p>Histórico geral. Confirme entregas, edite, duplique ou apague.</p>
           </div>
 
-          <div class="filters">
-            <label>
-              Data
-              <input id="filterDate" type="date" />
-            </label>
-
-            <label>
-              Cor
-              <input id="filterColor" type="text" placeholder="Ex: branco" />
-            </label>
-
-            <label>
-              Entrega
-              <select id="filterDelivery">
-                <option value="all">Todas</option>
-                <option value="yes">Confirmadas</option>
-                <option value="no">Pendentes</option>
-              </select>
-            </label>
-
-            <button id="clearFilters" class="btn ghost" type="button">Limpar</button>
-          </div>
-        </section>
-
-        <section class="panel">
           <div id="historyList"></div>
-        </section>
-      </section>
-
-      <section id="screen-closing" class="screen">
-        <section class="panel">
-          <div class="section-head">
-            <span class="eyebrow">Fechamento</span>
-            <h2>Fechamento do dia</h2>
-            <p>Resumo objetivo por data.</p>
-          </div>
-
-          <div class="compact-row">
-            <label>
-              Data
-              <input id="closingDate" type="date" />
-            </label>
-
-            <button id="downloadDayReport" class="btn primary" type="button">Baixar</button>
-          </div>
-
-          <div id="closingBox"></div>
         </section>
       </section>
 
@@ -273,50 +213,10 @@
           <div>
             <span class="eyebrow">Relatório</span>
             <h2>Relatório geral</h2>
-            <p>Baixe tudo em CSV.</p>
+            <p>Baixe tudo em CSV para guardar ou abrir em planilha.</p>
           </div>
 
-          <button id="downloadReport" class="btn primary" type="button">Baixar geral</button>
-        </section>
-
-        <section class="panel">
-          <div class="section-head">
-            <span class="eyebrow">Período</span>
-            <h2>Relatório por período</h2>
-          </div>
-
-          <div class="period-grid">
-            <label>
-              Início
-              <input id="periodStart" type="date" />
-            </label>
-
-            <label>
-              Fim
-              <input id="periodEnd" type="date" />
-            </label>
-
-            <button id="downloadPeriodReport" class="btn ghost" type="button">Baixar período</button>
-          </div>
-        </section>
-      </section>
-
-      <section id="screen-backup" class="screen">
-        <section class="panel">
-          <div class="section-head">
-            <span class="eyebrow">Backup</span>
-            <h2>Segurança dos dados</h2>
-            <p>Sem banco de dados, exporte backup regularmente.</p>
-          </div>
-
-          <div class="form-actions">
-            <button id="exportBackup" class="btn primary" type="button">Exportar backup</button>
-
-            <label class="btn ghost file-btn">
-              Importar backup
-              <input id="importBackup" type="file" accept="application/json" />
-            </label>
-          </div>
+          <button id="downloadReport" class="btn primary" type="button">Baixar relatório</button>
         </section>
       </section>
 
@@ -338,12 +238,6 @@
         </section>
 
         <section class="panel">
-          <span class="eyebrow">Modelos salvos</span>
-          <h2>Modelos de lote</h2>
-          <div id="modelsList"></div>
-        </section>
-
-        <section class="panel">
           <span class="eyebrow">App</span>
           <h2>Atualização</h2>
           <p>Use se o GitHub foi atualizado, mas o app ainda mostra versão antiga.</p>
@@ -354,7 +248,7 @@
         <section class="panel danger-zone">
           <span class="eyebrow danger">Perigo</span>
           <h2>Apagar tudo</h2>
-          <p>Remove lotes, modelos e configurações deste aparelho.</p>
+          <p>Remove todos os lotes e configurações deste aparelho.</p>
 
           <button id="clearAll" class="btn danger full" type="button">Apagar tudo</button>
         </section>
