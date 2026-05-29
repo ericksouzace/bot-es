@@ -1,16 +1,16 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="120" fill="#060811"/>
-  <rect x="36" y="36" width="440" height="440" rx="96" fill="url(#paint0_linear)"/>
-  <circle cx="256" cy="256" r="138" fill="#060811" fill-opacity="0.82"/>
-  <circle cx="205" cy="214" r="32" fill="#35F5A3"/>
-  <circle cx="307" cy="214" r="32" fill="#22D3EE"/>
-  <circle cx="205" cy="316" r="32" fill="#FACC15"/>
-  <circle cx="307" cy="316" r="32" fill="#FFFFFF"/>
-  <text x="256" y="274" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="72" font-weight="900">CB</text>
+  <rect width="512" height="512" rx="116" fill="#050816"/>
+  <rect x="42" y="42" width="428" height="428" rx="92" fill="url(#g)"/>
+  <circle cx="256" cy="256" r="140" fill="#050816" fill-opacity="0.88"/>
+  <circle cx="204" cy="212" r="30" fill="#35F5A3"/>
+  <circle cx="308" cy="212" r="30" fill="#22D3EE"/>
+  <circle cx="204" cy="316" r="30" fill="#FACC15"/>
+  <circle cx="308" cy="316" r="30" fill="#FFFFFF"/>
+  <text x="256" y="279" text-anchor="middle" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="74" font-weight="900">CB</text>
   <defs>
-    <linearGradient id="paint0_linear" x1="36" y1="36" x2="476" y2="476" gradientUnits="userSpaceOnUse">
+    <linearGradient id="g" x1="42" y1="42" x2="470" y2="470" gradientUnits="userSpaceOnUse">
       <stop stop-color="#35F5A3"/>
-      <stop offset="0.5" stop-color="#22D3EE"/>
+      <stop offset="0.52" stop-color="#22D3EE"/>
       <stop offset="1" stop-color="#FACC15"/>
     </linearGradient>
   </defs>
