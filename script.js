@@ -1,45 +1,77 @@
 const VALUE_BUTTON = 0.05;
 const VALUE_DELIVERY = 5;
-const STORAGE_KEY = "controleBotoesLocalAppV1";
 
-const batchForm = document.querySelector("#batchForm");
-const batchDate = document.querySelector("#batchDate");
-const itemsArea = document.querySelector("#itemsArea");
-const addItem = document.querySelector("#addItem");
+const STORAGE_KEY = "botoesProCleanV1";
+const LAST_SAVE_KEY = "botoesProCleanLastSave";
 
-const deliveryYes = document.querySelector("#deliveryYes");
-const deliveryNo = document.querySelector("#deliveryNo");
-const deliveryText = document.querySelector("#deliveryText");
-
-const formTitle = document.querySelector("#formTitle");
-const saveButton = document.querySelector("#saveButton");
-const cancelEdit = document.querySelector("#cancelEdit");
-
-const heroBalance = document.querySelector("#heroBalance");
-const generalBalance = document.querySelector("#generalBalance");
-const todayBalance = document.querySelector("#todayBalance");
-const todayButtons = document.querySelector("#todayButtons");
-const generalButtons = document.querySelector("#generalButtons");
-const deliveryCount = document.querySelector("#deliveryCount");
-
-const filterDate = document.querySelector("#filterDate");
-const filterColor = document.querySelector("#filterColor");
-const filterDelivery = document.querySelector("#filterDelivery");
-const clearFilters = document.querySelector("#clearFilters");
-
-const colorsSummary = document.querySelector("#colorsSummary");
-const historyList = document.querySelector("#historyList");
-
-const downloadReport = document.querySelector("#downloadReport");
-const downloadReportTop = document.querySelector("#downloadReportTop");
-const installApp = document.querySelector("#installApp");
-const clearAll = document.querySelector("#clearAll");
-const toast = document.querySelector("#toast");
+const defaultState = {
+  lots: [],
+  models: [],
+  settings: {
+    dailyGoal: 0
+  }
+};
 
 let state = loadState();
-let deliveryDone = false;
 let editingId = null;
 let deferredInstallPrompt = null;
+
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => document.querySelectorAll(selector);
+
+const screenNames = {
+  home: "Início",
+  newLot: "Novo lote",
+  history: "Histórico",
+  closing: "Fechamento",
+  reports: "Relatórios",
+  backup: "Backup",
+  settings: "Configurações"
+};
+
+const sidebar = $("#sidebar");
+const overlay = $("#overlay");
+const screenTitle = $("#screenTitle");
+const connectionStatus = $("#connectionStatus");
+const lastSaveText = $("#lastSaveText");
+
+const batchForm = $("#batchForm");
+const batchDate = $("#batchDate");
+const itemsArea = $("#itemsArea");
+const addItem = $("#addItem");
+const modelSelect = $("#modelSelect");
+const applyModel = $("#applyModel");
+const saveAsModel = $("#saveAsModel");
+const lotPreview = $("#lotPreview");
+const formTitle = $("#formTitle");
+const saveButton = $("#saveButton");
+const cancelEdit = $("#cancelEdit");
+
+const heroBalance = $("#heroBalance");
+const todayBalance = $("#todayBalance");
+const todayButtons = $("#todayButtons");
+const totalButtons = $("#totalButtons");
+const totalDeliveries = $("#totalDeliveries");
+const goalPercent = $("#goalPercent");
+const goalText = $("#goalText");
+const goalBar = $("#goalBar");
+const lastLotBox = $("#lastLotBox");
+
+const filterDate = $("#filterDate");
+const filterColor = $("#filterColor");
+const filterDelivery = $("#filterDelivery");
+const historyList = $("#historyList");
+
+const closingDate = $("#closingDate");
+const closingBox = $("#closingBox");
+
+const periodStart = $("#periodStart");
+const periodEnd = $("#periodEnd");
+
+const dailyGoalInput = $("#dailyGoalInput");
+const modelsList = $("#modelsList");
+
+const toast = $("#toast");
 
 function safeParse(text) {
   try {
@@ -54,100 +86,114 @@ function createId() {
 }
 
 function todayISO() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function normalizeLot(rawLot) {
-  const items = rawLot.items || rawLot.itens || [];
+function formatDate(date) {
+  if (!date || !date.includes("-")) return date || "";
+  const [y, m, d] = date.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function money(value) {
+  return Number(value).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
+
+function normalizeText(text) {
+  return String(text)
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function normalizeLot(raw) {
+  const items = raw.items || raw.itens || [];
 
   return {
-    id: String(rawLot.id || createId()),
-    date: rawLot.date || rawLot.data || todayISO(),
-    deliveryDone: Boolean(rawLot.deliveryDone || rawLot.entregaFeita),
+    id: String(raw.id || createId()),
+    date: raw.date || raw.data || todayISO(),
+    deliveryDone: Boolean(raw.deliveryDone || raw.entregaFeita),
     items: items
       .map((item) => ({
-        color: item.color || item.cor || "",
+        color: String(item.color || item.cor || "").trim(),
         quantity: Number(item.quantity || item.quantidade || 0)
       }))
       .filter((item) => item.color && item.quantity > 0),
-    createdAtMillis: Number(rawLot.createdAtMillis || Date.now())
+    createdAtMillis: Number(raw.createdAtMillis || Date.now())
+  };
+}
+
+function normalizeModel(raw) {
+  const items = raw.items || [];
+
+  return {
+    id: String(raw.id || createId()),
+    name: String(raw.name || "Modelo").trim(),
+    items: items
+      .map((item) => ({
+        color: String(item.color || "").trim(),
+        quantity: Number(item.quantity || 0)
+      }))
+      .filter((item) => item.color && item.quantity > 0),
+    createdAtMillis: Number(raw.createdAtMillis || Date.now())
   };
 }
 
 function loadState() {
   const saved = safeParse(localStorage.getItem(STORAGE_KEY));
 
-  if (saved && Array.isArray(saved.lots)) {
+  if (saved) {
     return {
-      lots: saved.lots.map(normalizeLot)
+      ...defaultState,
+      ...saved,
+      settings: {
+        ...defaultState.settings,
+        ...(saved.settings || {})
+      },
+      lots: Array.isArray(saved.lots) ? saved.lots.map(normalizeLot) : [],
+      models: Array.isArray(saved.models) ? saved.models.map(normalizeModel) : []
     };
   }
 
   const oldKeys = [
-    "controleBotoesProfissionalV3",
-    "controleBotoesProfissionalV2",
-    "controleBotoesUltraV1",
-    "lotesBotoesPro",
-    "lotesBotoes"
+    "botoesProUltimateV1",
+    "botoesProAppTabsV1",
+    "controleBotoesLocalAppV1",
+    "controleBotoesProfissionalV3"
   ];
 
   for (const key of oldKeys) {
-    const oldData = safeParse(localStorage.getItem(key));
+    const old = safeParse(localStorage.getItem(key));
 
-    if (oldData && Array.isArray(oldData.lots)) {
+    if (old && Array.isArray(old.lots)) {
       return {
-        lots: oldData.lots.map(normalizeLot)
-      };
-    }
-
-    if (Array.isArray(oldData)) {
-      return {
-        lots: oldData.map(normalizeLot)
+        ...defaultState,
+        lots: old.lots.map(normalizeLot),
+        models: Array.isArray(old.models) ? old.models.map(normalizeModel) : [],
+        settings: {
+          ...defaultState.settings,
+          ...(old.settings || {})
+        }
       };
     }
   }
 
-  const oldProductions = safeParse(localStorage.getItem("producoesBotoes"));
-
-  if (Array.isArray(oldProductions) && oldProductions.length > 0) {
-    const grouped = {};
-
-    oldProductions.forEach((item) => {
-      const date = item.data || todayISO();
-
-      if (!grouped[date]) {
-        grouped[date] = {
-          id: createId(),
-          date,
-          deliveryDone: false,
-          items: [],
-          createdAtMillis: Date.now()
-        };
-      }
-
-      grouped[date].items.push({
-        color: item.cor,
-        quantity: Number(item.quantidade)
-      });
-    });
-
-    return {
-      lots: Object.values(grouped).map(normalizeLot)
-    };
-  }
-
-  return {
-    lots: []
-  };
+  return structuredClone(defaultState);
 }
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(LAST_SAVE_KEY, new Date().toLocaleString("pt-BR"));
+  renderLastSave();
+}
+
+function renderLastSave() {
+  lastSaveText.textContent = localStorage.getItem(LAST_SAVE_KEY) || "Ainda não salvo";
 }
 
 function showToast(message) {
@@ -156,101 +202,75 @@ function showToast(message) {
 
   setTimeout(() => {
     toast.classList.remove("show");
-  }, 2800);
+  }, 2600);
 }
 
-function formatDate(date) {
-  if (!date || !date.includes("-")) {
-    return date || "";
-  }
-
-  const [year, month, day] = date.split("-");
-  return `${day}/${month}/${year}`;
+function openSidebar() {
+  sidebar.classList.add("open");
+  overlay.classList.add("show");
 }
 
-function money(value) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL"
+function closeSidebar() {
+  sidebar.classList.remove("open");
+  overlay.classList.remove("show");
+}
+
+function goToScreen(name) {
+  $$(".screen").forEach((screen) => screen.classList.remove("active"));
+  $(`#screen-${name}`)?.classList.add("active");
+
+  $$(".nav-link").forEach((button) => {
+    button.classList.toggle("active", button.dataset.screen === name);
   });
+
+  screenTitle.textContent = screenNames[name] || "Botões Pro";
+
+  closeSidebar();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  renderAll();
 }
 
-function normalize(text) {
-  return String(text)
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-}
-
-function setDelivery(value) {
-  deliveryDone = value;
-
-  if (deliveryDone) {
-    deliveryYes.classList.add("active");
-    deliveryNo.classList.remove("active");
-    deliveryText.textContent = "Entrega feita: R$ 5,00 serão adicionados ao saldo deste lote.";
-  } else {
-    deliveryNo.classList.add("active");
-    deliveryYes.classList.remove("active");
-    deliveryText.textContent = "Sem entrega: nenhum valor extra será adicionado.";
-  }
-}
-
-function createItemRow(quantity = "", color = "") {
+function createItemRow(container, quantity = "", color = "") {
   const row = document.createElement("div");
   row.className = "row-item";
 
   row.innerHTML = `
-    <input
-      class="item-quantity"
-      type="number"
-      inputmode="numeric"
-      min="1"
-      placeholder="Qtd."
-      value="${quantity}"
-      required
-    />
-
-    <input
-      class="item-color"
-      type="text"
-      list="colorSuggestions"
-      placeholder="Cor. Ex: Pink"
-      value="${color}"
-      required
-    />
-
+    <input class="item-quantity" type="number" min="1" inputmode="numeric" placeholder="Qtd." value="${quantity}" required />
+    <input class="item-color" type="text" list="colorSuggestions" placeholder="Cor" value="${color}" required />
     <button type="button" class="remove-row">×</button>
   `;
 
-  const removeButton = row.querySelector(".remove-row");
-
-  removeButton.addEventListener("click", () => {
-    const rows = document.querySelectorAll(".row-item");
+  row.querySelector(".remove-row").addEventListener("click", () => {
+    const rows = container.querySelectorAll(".row-item");
 
     if (rows.length > 1) {
       row.remove();
-      return;
+    } else {
+      row.querySelector(".item-quantity").value = "";
+      row.querySelector(".item-color").value = "";
     }
 
-    row.querySelector(".item-quantity").value = "";
-    row.querySelector(".item-color").value = "";
+    updatePreview();
   });
 
-  itemsArea.appendChild(row);
+  row.querySelectorAll("input").forEach((input) => {
+    input.addEventListener("input", updatePreview);
+  });
+
+  container.appendChild(row);
+  updatePreview();
 }
 
-function collectItems() {
-  const rows = document.querySelectorAll(".row-item");
+function collectItems(container) {
   const map = {};
 
-  rows.forEach((row) => {
+  container.querySelectorAll(".row-item").forEach((row) => {
     const quantity = Number(row.querySelector(".item-quantity").value);
     const color = row.querySelector(".item-color").value.trim();
 
-    if (quantity > 0 && color !== "") {
-      const key = normalize(color);
+    if (quantity > 0 && color) {
+      const key = normalizeText(color);
 
       if (!map[key]) {
         map[key] = {
@@ -266,127 +286,91 @@ function collectItems() {
   return Object.values(map);
 }
 
+function updatePreview() {
+  const items = collectItems(itemsArea);
+  const buttons = items.reduce((sum, item) => sum + item.quantity, 0);
+  lotPreview.textContent = `${buttons} botões • ${money(buttons * VALUE_BUTTON)}`;
+}
+
 function clearForm() {
   editingId = null;
-
   formTitle.textContent = "Novo lote";
   saveButton.textContent = "Salvar lote";
   cancelEdit.style.display = "none";
 
   batchDate.value = todayISO();
   itemsArea.innerHTML = "";
-
-  createItemRow();
-  setDelivery(false);
+  createItemRow(itemsArea);
+  updatePreview();
 }
 
 function lotButtons(lot) {
-  return lot.items.reduce((total, item) => total + Number(item.quantity), 0);
+  return lot.items.reduce((sum, item) => sum + Number(item.quantity), 0);
 }
 
 function lotBalance(lot) {
-  const buttonsValue = lotButtons(lot) * VALUE_BUTTON;
-  const deliveryValue = lot.deliveryDone ? VALUE_DELIVERY : 0;
-
-  return buttonsValue + deliveryValue;
+  return lotButtons(lot) * VALUE_BUTTON + (lot.deliveryDone ? VALUE_DELIVERY : 0);
 }
 
-function allItems() {
-  const list = [];
-
-  state.lots.forEach((lot) => {
-    lot.items.forEach((item) => {
-      list.push({
-        lotId: lot.id,
-        date: lot.date,
-        deliveryDone: lot.deliveryDone,
-        color: item.color,
-        quantity: Number(item.quantity)
-      });
-    });
-  });
-
-  return list;
+function getLotsByDate(date) {
+  return state.lots.filter((lot) => lot.date === date);
 }
 
-function calculateGeneralBalance() {
-  const totalButtons = allItems().reduce((total, item) => total + item.quantity, 0);
-  const totalDeliveries = state.lots.filter((lot) => lot.deliveryDone).length;
+function getStats(lots) {
+  const buttons = lots.reduce((sum, lot) => sum + lotButtons(lot), 0);
+  const deliveries = lots.filter((lot) => lot.deliveryDone).length;
 
-  return (totalButtons * VALUE_BUTTON) + (totalDeliveries * VALUE_DELIVERY);
+  return {
+    buttons,
+    deliveries,
+    buttonValue: buttons * VALUE_BUTTON,
+    deliveryValue: deliveries * VALUE_DELIVERY,
+    total: buttons * VALUE_BUTTON + deliveries * VALUE_DELIVERY
+  };
 }
 
 function renderDashboard() {
   const today = todayISO();
-  const items = allItems();
 
-  const totalButtons = items.reduce((total, item) => total + item.quantity, 0);
+  const totalStats = getStats(state.lots);
+  const todayStats = getStats(getLotsByDate(today));
 
-  const buttonsToday = items
-    .filter((item) => item.date === today)
-    .reduce((total, item) => total + item.quantity, 0);
+  heroBalance.textContent = money(totalStats.total);
+  todayBalance.textContent = money(todayStats.total);
+  todayButtons.textContent = todayStats.buttons;
+  totalButtons.textContent = totalStats.buttons;
+  totalDeliveries.textContent = totalStats.deliveries;
 
-  const totalDeliveries = state.lots.filter((lot) => lot.deliveryDone).length;
+  const goal = Number(state.settings.dailyGoal || 0);
+  const percent = goal > 0 ? Math.min(100, Math.round((todayStats.buttons / goal) * 100)) : 0;
 
-  const deliveriesToday = state.lots
-    .filter((lot) => lot.date === today && lot.deliveryDone)
-    .length;
+  goalPercent.textContent = goal > 0 ? `${percent}%` : "Sem meta";
+  goalText.textContent = goal > 0
+    ? `${todayStats.buttons} de ${goal} botões hoje.`
+    : "Configure uma meta nas configurações.";
 
-  const balance = calculateGeneralBalance();
-  const balanceToday = (buttonsToday * VALUE_BUTTON) + (deliveriesToday * VALUE_DELIVERY);
+  goalBar.style.width = `${percent}%`;
 
-  heroBalance.textContent = money(balance);
-  generalBalance.textContent = money(balance);
-  todayBalance.textContent = money(balanceToday);
-  todayButtons.textContent = buttonsToday;
-  generalButtons.textContent = totalButtons;
-  deliveryCount.textContent = totalDeliveries;
+  renderLastLot();
 }
 
-function renderColorsSummary() {
-  const items = allItems();
-  const summary = {};
+function renderLastLot() {
+  const lot = [...state.lots].sort((a, b) => b.createdAtMillis - a.createdAtMillis)[0];
 
-  items.forEach((item) => {
-    const key = normalize(item.color);
-
-    if (!summary[key]) {
-      summary[key] = {
-        color: item.color,
-        quantity: 0
-      };
-    }
-
-    summary[key].quantity += item.quantity;
-  });
-
-  const result = Object.values(summary).sort((a, b) => b.quantity - a.quantity);
-  const max = result.length ? result[0].quantity : 1;
-
-  colorsSummary.innerHTML = "";
-
-  if (result.length === 0) {
-    colorsSummary.innerHTML = `<div class="empty">Nenhuma cor registrada ainda.</div>`;
+  if (!lot) {
+    lastLotBox.innerHTML = `<div class="empty">Nenhum lote registrado ainda.</div>`;
     return;
   }
 
-  result.forEach((item) => {
-    const percent = Math.max(8, Math.round((item.quantity / max) * 100));
-    const balance = item.quantity * VALUE_BUTTON;
+  const buttons = lotButtons(lot);
 
-    const div = document.createElement("div");
-    div.className = "color-card";
-    div.style.setProperty("--w", `${percent}%`);
-
-    div.innerHTML = `
-      <div class="color-card-inner">
-        <span>${item.color}</span>
-        <strong>${item.quantity} • ${money(balance)}</strong>
-      </div>
-    `;
-
-    colorsSummary.appendChild(div);
-  });
+  lastLotBox.innerHTML = `
+    <div class="last-card">
+      <h3>${formatDate(lot.date)}</h3>
+      <p>${buttons} botões • ${money(buttons * VALUE_BUTTON)}</p>
+      <p>${lot.deliveryDone ? "Entrega confirmada" : "Entrega pendente"}</p>
+    </div>
+  `;
 }
 
 function filteredLots() {
@@ -396,11 +380,11 @@ function filteredLots() {
     list = list.filter((lot) => lot.date === filterDate.value);
   }
 
-  if (filterColor.value.trim() !== "") {
-    const search = normalize(filterColor.value);
+  if (filterColor.value.trim()) {
+    const search = normalizeText(filterColor.value);
 
     list = list.filter((lot) => {
-      return lot.items.some((item) => normalize(item.color).includes(search));
+      return lot.items.some((item) => normalizeText(item.color).includes(search));
     });
   }
 
@@ -413,209 +397,373 @@ function filteredLots() {
   }
 
   return list.sort((a, b) => {
-    if (a.date !== b.date) {
-      return b.date.localeCompare(a.date);
-    }
-
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
     return b.createdAtMillis - a.createdAtMillis;
   });
 }
 
+function groupByDate(lots) {
+  return lots.reduce((groups, lot) => {
+    groups[lot.date] = groups[lot.date] || [];
+    groups[lot.date].push(lot);
+    return groups;
+  }, {});
+}
+
 function renderHistory() {
-  const list = filteredLots();
+  const lots = filteredLots();
   historyList.innerHTML = "";
 
-  if (list.length === 0) {
+  if (!lots.length) {
     historyList.innerHTML = `<div class="empty">Nenhum lote encontrado.</div>`;
     return;
   }
 
-  list.forEach((lot) => {
-    const total = lotButtons(lot);
-    const buttonsBalance = total * VALUE_BUTTON;
-    const deliveryBalance = lot.deliveryDone ? VALUE_DELIVERY : 0;
-    const balance = lotBalance(lot);
+  const groups = groupByDate(lots);
 
-    const itemsHTML = lot.items
-      .map((item) => {
-        const subtotal = item.quantity * VALUE_BUTTON;
+  Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach((date) => {
+    const dayLots = groups[date];
+    const stats = getStats(dayLots);
 
-        return `
-          <li>
-            <span>${item.quantity} ${item.color}</span>
-            <strong>${money(subtotal)}</strong>
-          </li>
-        `;
-      })
-      .join("");
+    const wrapper = document.createElement("div");
+    wrapper.className = "history-day";
 
-    const deliveryChip = lot.deliveryDone
-      ? `<span class="chip chip-ok">Entrega: Sim + ${money(deliveryBalance)}</span>`
-      : `<span class="chip chip-no">Entrega: Não</span>`;
-
-    const div = document.createElement("article");
-    div.className = "history-card";
-
-    div.innerHTML = `
-      <h3>Lote de ${formatDate(lot.date)}</h3>
-
-      <div class="chips">
-        <span class="chip">Botões: ${total}</span>
-        <span class="chip">Valor botões: ${money(buttonsBalance)}</span>
-        ${deliveryChip}
-        <span class="chip chip-ok">Total: ${money(balance)}</span>
-      </div>
-
-      <ul class="items-list">
-        ${itemsHTML}
-      </ul>
-
-      <div class="history-actions">
-        <button class="btn btn-dark" type="button" data-action="edit" data-id="${lot.id}">
-          Editar
-        </button>
-
-        <button class="btn btn-danger" type="button" data-action="delete" data-id="${lot.id}">
-          Apagar
-        </button>
-      </div>
+    wrapper.innerHTML = `
+      <h3 class="day-title">${formatDate(date)} • ${stats.buttons} botões • ${money(stats.total)}</h3>
     `;
 
-    historyList.appendChild(div);
+    dayLots.forEach((lot) => {
+      wrapper.appendChild(createHistoryCard(lot));
+    });
+
+    historyList.appendChild(wrapper);
   });
+}
+
+function createHistoryCard(lot) {
+  const buttons = lotButtons(lot);
+  const card = document.createElement("article");
+
+  card.className = "history-card";
+
+  card.innerHTML = `
+    <div class="chips">
+      <span class="chip">${buttons} botões</span>
+      <span class="chip">${money(buttons * VALUE_BUTTON)}</span>
+      <span class="chip ${lot.deliveryDone ? "ok" : "no"}">${lot.deliveryDone ? "Entrega confirmada" : "Entrega pendente"}</span>
+      <span class="chip ok">Total: ${money(lotBalance(lot))}</span>
+    </div>
+
+    <ul class="items-list">
+      ${lot.items.map((item) => `
+        <li>
+          <span>${item.quantity} ${item.color}</span>
+          <strong>${money(item.quantity * VALUE_BUTTON)}</strong>
+        </li>
+      `).join("")}
+    </ul>
+
+    <div class="history-actions">
+      <button class="btn primary" data-action="delivery" data-id="${lot.id}" type="button">
+        ${lot.deliveryDone ? "Remover entrega" : "Confirmar entrega"}
+      </button>
+
+      <button class="btn ghost" data-action="duplicate" data-id="${lot.id}" type="button">
+        Duplicar
+      </button>
+
+      <button class="btn dark" data-action="edit" data-id="${lot.id}" type="button">
+        Editar
+      </button>
+
+      <button class="btn danger" data-action="delete" data-id="${lot.id}" type="button">
+        Apagar
+      </button>
+    </div>
+  `;
+
+  return card;
+}
+
+function renderClosing() {
+  const date = closingDate.value || todayISO();
+  closingDate.value = date;
+
+  const lots = getLotsByDate(date);
+  const stats = getStats(lots);
+
+  if (!lots.length) {
+    closingBox.innerHTML = `<div class="empty">Nenhum lote em ${formatDate(date)}.</div>`;
+    return;
+  }
+
+  closingBox.innerHTML = `
+    <div class="closing-card">
+      <h3>${formatDate(date)}</h3>
+
+      <div class="closing-grid">
+        <div><span>Botões</span><strong>${stats.buttons}</strong></div>
+        <div><span>Valor botões</span><strong>${money(stats.buttonValue)}</strong></div>
+        <div><span>Entregas</span><strong>${stats.deliveries}</strong></div>
+        <div><span>Valor entregas</span><strong>${money(stats.deliveryValue)}</strong></div>
+        <div><span>Lotes</span><strong>${lots.length}</strong></div>
+        <div><span>Total</span><strong>${money(stats.total)}</strong></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderModels() {
+  modelSelect.innerHTML = `<option value="">Nenhum modelo</option>`;
+
+  state.models.forEach((model) => {
+    const option = document.createElement("option");
+    option.value = model.id;
+    option.textContent = model.name;
+    modelSelect.appendChild(option);
+  });
+
+  if (!state.models.length) {
+    modelsList.innerHTML = `<div class="empty">Nenhum modelo salvo.</div>`;
+    return;
+  }
+
+  modelsList.innerHTML = state.models.map((model) => `
+    <article class="model-card">
+      <h3>${model.name}</h3>
+
+      <ul class="items-list">
+        ${model.items.map((item) => `
+          <li>
+            <span>${item.quantity} ${item.color}</span>
+            <strong>${money(item.quantity * VALUE_BUTTON)}</strong>
+          </li>
+        `).join("")}
+      </ul>
+
+      <div class="model-actions">
+        <button class="btn primary" data-model-use="${model.id}" type="button">Usar</button>
+        <button class="btn danger" data-model-delete="${model.id}" type="button">Apagar</button>
+      </div>
+    </article>
+  `).join("");
 }
 
 function renderAll() {
   renderDashboard();
-  renderColorsSummary();
   renderHistory();
+  renderClosing();
+  renderModels();
+  renderLastSave();
+
+  dailyGoalInput.value = state.settings.dailyGoal || "";
 }
 
 function saveLot(event) {
   event.preventDefault();
 
-  const items = collectItems();
+  const items = collectItems(itemsArea);
 
-  if (items.length === 0) {
-    showToast("Adicione pelo menos uma cor ao lote.");
+  if (!items.length) {
+    showToast("Adicione pelo menos uma cor.");
     return;
   }
+
+  const buttons = items.reduce((sum, item) => sum + item.quantity, 0);
+
+  if (buttons > 5000) {
+    const ok = confirm(`Você está salvando ${buttons} botões. Está correto?`);
+    if (!ok) return;
+  }
+
+  const old = state.lots.find((lot) => lot.id === editingId);
 
   const lot = {
     id: editingId || createId(),
     date: batchDate.value,
-    deliveryDone,
+    deliveryDone: old ? old.deliveryDone : false,
     items,
-    createdAtMillis: editingId
-      ? state.lots.find((item) => String(item.id) === String(editingId))?.createdAtMillis || Date.now()
-      : Date.now()
+    createdAtMillis: old ? old.createdAtMillis : Date.now()
   };
 
   if (editingId) {
-    state.lots = state.lots.map((item) => {
-      return String(item.id) === String(editingId) ? lot : item;
-    });
-
-    showToast("Lote atualizado com sucesso.");
+    state.lots = state.lots.map((item) => item.id === editingId ? lot : item);
+    showToast("Lote atualizado.");
   } else {
     state.lots.push(lot);
-    showToast("Lote salvo com sucesso.");
+    showToast("Lote salvo. Confirme a entrega depois.");
   }
 
   saveState();
   clearForm();
   renderAll();
+  goToScreen("history");
 }
 
 function editLot(id) {
-  const lot = state.lots.find((item) => String(item.id) === String(id));
+  const lot = state.lots.find((item) => item.id === id);
 
   if (!lot) {
-    showToast("Não encontrei esse lote para editar.");
+    showToast("Lote não encontrado.");
     return;
   }
 
-  editingId = String(lot.id);
-
+  editingId = lot.id;
   formTitle.textContent = "Editando lote";
   saveButton.textContent = "Atualizar lote";
   cancelEdit.style.display = "block";
 
   batchDate.value = lot.date;
-  setDelivery(Boolean(lot.deliveryDone));
-
   itemsArea.innerHTML = "";
 
   lot.items.forEach((item) => {
-    createItemRow(item.quantity, item.color);
+    createItemRow(itemsArea, item.quantity, item.color);
   });
 
-  document.querySelector("#formPanel").scrollIntoView({
-    behavior: "smooth",
-    block: "start"
+  updatePreview();
+  goToScreen("newLot");
+}
+
+function duplicateLot(id) {
+  const lot = state.lots.find((item) => item.id === id);
+
+  if (!lot) {
+    showToast("Lote não encontrado.");
+    return;
+  }
+
+  editingId = null;
+  formTitle.textContent = "Novo lote duplicado";
+  saveButton.textContent = "Salvar lote";
+  cancelEdit.style.display = "none";
+
+  batchDate.value = todayISO();
+  itemsArea.innerHTML = "";
+
+  lot.items.forEach((item) => {
+    createItemRow(itemsArea, item.quantity, item.color);
   });
+
+  updatePreview();
+  goToScreen("newLot");
+  showToast("Lote duplicado. Revise e salve.");
 }
 
 function deleteLot(id) {
-  const confirmDelete = confirm("Apagar este lote? O saldo será recalculado automaticamente.");
+  if (!confirm("Apagar este lote?")) return;
 
-  if (!confirmDelete) {
-    return;
-  }
+  state.lots = state.lots.filter((lot) => lot.id !== id);
 
-  const before = state.lots.length;
-
-  state.lots = state.lots.filter((lot) => String(lot.id) !== String(id));
-
-  if (state.lots.length === before) {
-    showToast("Não encontrei esse lote para apagar.");
-    return;
-  }
-
-  if (editingId && String(editingId) === String(id)) {
+  if (editingId === id) {
     clearForm();
   }
 
   saveState();
   renderAll();
-
-  showToast("Lote apagado. Saldo atualizado.");
+  showToast("Lote apagado.");
 }
 
-function escapeCSV(value) {
-  const text = String(value ?? "");
+function toggleDelivery(id) {
+  const lot = state.lots.find((item) => item.id === id);
 
-  if (text.includes(";") || text.includes('"') || text.includes("\n")) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-
-  return text;
-}
-
-function downloadCSV() {
-  if (state.lots.length === 0) {
-    showToast("Não há dados para baixar.");
+  if (!lot) {
+    showToast("Lote não encontrado.");
     return;
   }
 
-  let csv = "Data;Tipo;Cor;Quantidade;Valor unitario;Subtotal;Entrega feita;Total do lote\n";
+  lot.deliveryDone = !lot.deliveryDone;
 
-  state.lots.forEach((lot) => {
+  saveState();
+  renderAll();
+
+  showToast(lot.deliveryDone ? "Entrega confirmada: + R$ 5,00." : "Entrega removida.");
+}
+
+function saveCurrentAsModel() {
+  const items = collectItems(itemsArea);
+
+  if (!items.length) {
+    showToast("Adicione itens antes de salvar modelo.");
+    return;
+  }
+
+  const name = prompt("Nome do modelo:");
+
+  if (!name || !name.trim()) {
+    return;
+  }
+
+  state.models.push({
+    id: createId(),
+    name: name.trim(),
+    items,
+    createdAtMillis: Date.now()
+  });
+
+  saveState();
+  renderAll();
+  showToast("Modelo salvo.");
+}
+
+function useModel(id) {
+  const model = state.models.find((item) => item.id === id);
+
+  if (!model) {
+    showToast("Modelo não encontrado.");
+    return;
+  }
+
+  editingId = null;
+  formTitle.textContent = "Novo lote";
+  saveButton.textContent = "Salvar lote";
+  cancelEdit.style.display = "none";
+
+  batchDate.value = todayISO();
+  itemsArea.innerHTML = "";
+
+  model.items.forEach((item) => {
+    createItemRow(itemsArea, item.quantity, item.color);
+  });
+
+  updatePreview();
+  goToScreen("newLot");
+}
+
+function applySelectedModel() {
+  if (!modelSelect.value) {
+    showToast("Escolha um modelo.");
+    return;
+  }
+
+  useModel(modelSelect.value);
+}
+
+function deleteModel(id) {
+  if (!confirm("Apagar este modelo?")) return;
+
+  state.models = state.models.filter((model) => model.id !== id);
+  saveState();
+  renderAll();
+  showToast("Modelo apagado.");
+}
+
+function buildCSV(lots) {
+  let csv = "Data;Tipo;Cor;Quantidade;Valor unitario;Subtotal;Entrega confirmada;Total do lote\n";
+
+  lots.forEach((lot) => {
     const totalLot = lotBalance(lot);
 
     lot.items.forEach((item) => {
-      const subtotal = item.quantity * VALUE_BUTTON;
-
       csv += [
         formatDate(lot.date),
         "Botões",
         item.color,
         item.quantity,
         VALUE_BUTTON.toFixed(2),
-        subtotal.toFixed(2),
+        (item.quantity * VALUE_BUTTON).toFixed(2),
         lot.deliveryDone ? "Sim" : "Não",
         totalLot.toFixed(2)
-      ].map(escapeCSV).join(";") + "\n";
+      ].join(";") + "\n";
     });
 
     if (lot.deliveryDone) {
@@ -628,65 +776,123 @@ function downloadCSV() {
         VALUE_DELIVERY.toFixed(2),
         "Sim",
         totalLot.toFixed(2)
-      ].map(escapeCSV).join(";") + "\n";
+      ].join(";") + "\n";
     }
   });
 
-  const totalButtons = allItems().reduce((total, item) => total + item.quantity, 0);
-  const totalDeliveries = state.lots.filter((lot) => lot.deliveryDone).length;
-  const buttonBalance = totalButtons * VALUE_BUTTON;
-  const deliveryBalance = totalDeliveries * VALUE_DELIVERY;
-  const finalBalance = buttonBalance + deliveryBalance;
+  const stats = getStats(lots);
 
   csv += "\n";
-  csv += ["TOTAL DE BOTÕES", "", "", totalButtons, "", buttonBalance.toFixed(2), "", ""].map(escapeCSV).join(";") + "\n";
-  csv += ["TOTAL DE ENTREGAS", "", "", totalDeliveries, "", deliveryBalance.toFixed(2), "", ""].map(escapeCSV).join(";") + "\n";
-  csv += ["SALDO FINAL", "", "", "", "", finalBalance.toFixed(2), "", ""].map(escapeCSV).join(";") + "\n";
+  csv += `TOTAL DE BOTÕES;;;${stats.buttons};;${stats.buttonValue.toFixed(2)};;\n`;
+  csv += `TOTAL DE ENTREGAS;;;${stats.deliveries};;${stats.deliveryValue.toFixed(2)};;\n`;
+  csv += `SALDO FINAL;;;;;${stats.total.toFixed(2)};;\n`;
 
-  const file = new Blob(["\uFEFF" + csv], {
-    type: "text/csv;charset=utf-8;"
-  });
+  return csv;
+}
 
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  const url = URL.createObjectURL(file);
 
   link.href = url;
-  link.download = `relatorio-controle-de-botoes-${todayISO()}.csv`;
+  link.download = filename;
   link.click();
 
   URL.revokeObjectURL(url);
+}
 
+function downloadCSV(lots, filename) {
+  if (!lots.length) {
+    showToast("Não há dados para baixar.");
+    return;
+  }
+
+  downloadFile("\uFEFF" + buildCSV(lots), filename, "text/csv;charset=utf-8;");
   showToast("Relatório baixado.");
 }
 
-function clearAllHistory() {
-  const first = confirm("Tem certeza que deseja apagar TODO o histórico deste aparelho?");
+function exportBackup() {
+  const backup = {
+    app: "Botões Pro",
+    exportedAt: new Date().toISOString(),
+    state
+  };
 
-  if (!first) {
-    return;
-  }
+  downloadFile(
+    JSON.stringify(backup, null, 2),
+    `backup-botoes-pro-${todayISO()}.json`,
+    "application/json;charset=utf-8;"
+  );
 
-  const second = confirm("Última confirmação: essa ação não pode ser desfeita.");
+  showToast("Backup exportado.");
+}
 
-  if (!second) {
-    return;
-  }
+function importBackup(event) {
+  const file = event.target.files[0];
 
-  state.lots = [];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    const data = safeParse(reader.result);
+    const importedState = data?.state || data;
+
+    if (!importedState || !Array.isArray(importedState.lots)) {
+      showToast("Backup inválido.");
+      return;
+    }
+
+    if (!confirm("Importar backup e substituir os dados atuais?")) return;
+
+    state = {
+      ...defaultState,
+      ...importedState,
+      settings: {
+        ...defaultState.settings,
+        ...(importedState.settings || {})
+      },
+      lots: importedState.lots.map(normalizeLot),
+      models: Array.isArray(importedState.models) ? importedState.models.map(normalizeModel) : []
+    };
+
+    saveState();
+    renderAll();
+    showToast("Backup importado.");
+  };
+
+  reader.readAsText(file);
+  event.target.value = "";
+}
+
+function clearAll() {
+  if (!confirm("Apagar todos os dados deste aparelho?")) return;
+  if (!confirm("Última confirmação. Essa ação não pode ser desfeita.")) return;
+
+  state = structuredClone(defaultState);
   saveState();
   clearForm();
   renderAll();
-
-  showToast("Histórico apagado.");
+  showToast("Tudo apagado.");
 }
 
-function setupInstallButton() {
+async function refreshApp() {
+  if ("caches" in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+  }
+
+  location.reload();
+}
+
+function setupInstall() {
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstallPrompt = event;
   });
 
-  installApp.addEventListener("click", async () => {
+  $("#installApp").addEventListener("click", async () => {
     if (deferredInstallPrompt) {
       deferredInstallPrompt.prompt();
       await deferredInstallPrompt.userChoice;
@@ -696,30 +902,40 @@ function setupInstallButton() {
 
     alert(
       "Para instalar:\n\n" +
-      "iPhone: abra no Safari → Compartilhar → Adicionar à Tela de Início.\n\n" +
-      "Android: Chrome → três pontinhos → Instalar app ou Adicionar à tela inicial."
+      "iPhone: Safari → Compartilhar → Adicionar à Tela de Início.\n\n" +
+      "Android: Chrome → três pontinhos → Instalar app."
     );
   });
 }
 
 function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) {
-    return;
-  }
+  if (!("serviceWorker" in navigator)) return;
 
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js").catch((error) => {
-      console.error("Erro no Service Worker:", error);
-    });
+    navigator.serviceWorker.register("./service-worker.js").catch(console.error);
   });
 }
 
+function updateConnection() {
+  connectionStatus.textContent = navigator.onLine ? "Online" : "Offline";
+}
+
+$("#openMenu").addEventListener("click", openSidebar);
+$("#closeMenu").addEventListener("click", closeSidebar);
+overlay.addEventListener("click", closeSidebar);
+
+$$(".nav-link").forEach((button) => {
+  button.addEventListener("click", () => goToScreen(button.dataset.screen));
+});
+
+$$("[data-go]").forEach((button) => {
+  button.addEventListener("click", () => goToScreen(button.dataset.go));
+});
+
 batchForm.addEventListener("submit", saveLot);
-
-deliveryYes.addEventListener("click", () => setDelivery(true));
-deliveryNo.addEventListener("click", () => setDelivery(false));
-
-addItem.addEventListener("click", () => createItemRow());
+addItem.addEventListener("click", () => createItemRow(itemsArea));
+saveAsModel.addEventListener("click", saveCurrentAsModel);
+applyModel.addEventListener("click", applySelectedModel);
 
 cancelEdit.addEventListener("click", () => {
   clearForm();
@@ -728,41 +944,91 @@ cancelEdit.addEventListener("click", () => {
 
 historyList.addEventListener("click", (event) => {
   const button = event.target.closest("button");
+  if (!button) return;
 
-  if (!button) {
-    return;
-  }
-
-  const action = button.dataset.action;
   const id = button.dataset.id;
+  const action = button.dataset.action;
 
-  if (action === "edit") {
-    editLot(id);
-  }
+  if (action === "delivery") toggleDelivery(id);
+  if (action === "duplicate") duplicateLot(id);
+  if (action === "edit") editLot(id);
+  if (action === "delete") deleteLot(id);
+});
 
-  if (action === "delete") {
-    deleteLot(id);
-  }
+modelsList.addEventListener("click", (event) => {
+  const useButton = event.target.closest("[data-model-use]");
+  const deleteButton = event.target.closest("[data-model-delete]");
+
+  if (useButton) useModel(useButton.dataset.modelUse);
+  if (deleteButton) deleteModel(deleteButton.dataset.modelDelete);
 });
 
 filterDate.addEventListener("change", renderHistory);
 filterColor.addEventListener("input", renderHistory);
 filterDelivery.addEventListener("change", renderHistory);
 
-clearFilters.addEventListener("click", () => {
+$("#clearFilters").addEventListener("click", () => {
   filterDate.value = "";
   filterColor.value = "";
   filterDelivery.value = "all";
-
   renderHistory();
 });
 
-downloadReport.addEventListener("click", downloadCSV);
-downloadReportTop.addEventListener("click", downloadCSV);
-clearAll.addEventListener("click", clearAllHistory);
+closingDate.addEventListener("change", renderClosing);
 
-setupInstallButton();
-registerServiceWorker();
+$("#downloadDayReport").addEventListener("click", () => {
+  const date = closingDate.value || todayISO();
+  downloadCSV(getLotsByDate(date), `fechamento-${date}.csv`);
+});
+
+$("#downloadReport").addEventListener("click", () => {
+  downloadCSV(state.lots, `relatorio-geral-${todayISO()}.csv`);
+});
+
+$("#downloadPeriodReport").addEventListener("click", () => {
+  const start = periodStart.value;
+  const end = periodEnd.value;
+
+  if (!start || !end) {
+    showToast("Escolha início e fim.");
+    return;
+  }
+
+  if (start > end) {
+    showToast("Data inicial maior que a final.");
+    return;
+  }
+
+  const lots = state.lots.filter((lot) => lot.date >= start && lot.date <= end);
+  downloadCSV(lots, `relatorio-${start}-a-${end}.csv`);
+});
+
+$("#exportBackup").addEventListener("click", exportBackup);
+$("#importBackup").addEventListener("change", importBackup);
+
+$("#goalForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  state.settings.dailyGoal = Number(dailyGoalInput.value || 0);
+  saveState();
+  renderAll();
+  showToast("Meta salva.");
+});
+
+$("#refreshApp").addEventListener("click", refreshApp);
+$("#clearAll").addEventListener("click", clearAll);
+
+window.addEventListener("online", updateConnection);
+window.addEventListener("offline", updateConnection);
+
+closingDate.value = todayISO();
+periodStart.value = todayISO();
+periodEnd.value = todayISO();
+
+dailyGoalInput.value = state.settings.dailyGoal || "";
+
 clearForm();
-saveState();
+setupInstall();
+registerServiceWorker();
+updateConnection();
 renderAll();
+saveState();
